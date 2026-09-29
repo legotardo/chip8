@@ -73,7 +73,7 @@ Set_I :: Instruction {
 }
 
 Display :: Instruction {
-	addr = 0xd000,
+	addr = 0xD000,
 	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
@@ -262,8 +262,12 @@ VX_SHIFT_R :: Instruction {
 	mask = 0xF00F,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
 
+		registers[x] = registers[y]
+		shifted := registers[x] & 1
 		registers[x] >>= 1
+		registers[15] = shifted
 
 		return false
 	},
@@ -288,8 +292,12 @@ VX_SHIFT_L :: Instruction {
 	mask = 0xF00F,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
 
+		registers[x] = registers[y]
+		shifted := registers[x] & 1
 		registers[x] <<= 1
+		registers[15] = shifted
 
 		return false
 	},
