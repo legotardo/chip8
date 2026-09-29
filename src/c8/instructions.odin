@@ -30,6 +30,27 @@ Jump :: Instruction {
 	},
 }
 
+Call_Subrotine :: Instruction {
+	addr = 0x2000,
+	mask = 0xF000,
+	handle = proc(opcode: u16) -> bool {
+		push_stack(pc)
+		pc = opcode & 0x0FFF
+
+		return false
+	},
+}
+
+Return_Subrotine :: Instruction {
+	addr = 0x00EE,
+	mask = 0xFFFF,
+	handle = proc(opcode: u16) -> bool {
+		pc = pop_stack()
+
+		return false
+	},
+}
+
 Set_VX :: Instruction {
 	addr = 0x6000,
 	mask = 0xF000,
@@ -333,4 +354,6 @@ instructions := [?]Instruction {
 	Set_VX_From_Delay_Timer,
 	Set_Delay_Timer,
 	Set_Sound_Timer,
+	Call_Subrotine,
+	Return_Subrotine,
 }

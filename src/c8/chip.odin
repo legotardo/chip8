@@ -15,9 +15,11 @@ FREQUENCY_MS :: 1000.0 / 700
 TIMERS_FREQUENCY_MS :: 1000.0 / 60
 
 memory: [4096]byte
+stack: [16]u16
 display_memory: [2048]byte
 i := cast(^u16)&memory[I_ADDR]
 pc: u16 = START_ADDR
+sp: u8 = 0
 registers: [16]byte
 last_tick: time.Tick
 cpu_accumulator: f64
@@ -95,4 +97,16 @@ run_cycles :: proc() {
 }
 
 destroy :: proc() {
+}
+
+push_stack :: proc(data: u16) {
+	stack[sp] = data
+	sp += 1
+}
+
+pop_stack :: proc() -> u16 {
+	val := stack[sp - 1]
+	sp -= 1
+
+	return val
 }
