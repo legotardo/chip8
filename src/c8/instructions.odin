@@ -335,9 +335,9 @@ Store_Value :: Instruction {
 	addr = 0xF055,
 	mask = 0xF0FF,
 	handle = proc(opcode: u16) -> bool {
-		x := (opcode & 0xF00) >> 8
+		x := (opcode & 0x0F00) >> 8
 
-		for count: u16 = 0; count < x; count += 1 {
+		for count: u16 = 0; count <= x; count += 1 {
 			memory[I + count] = registers[count]
 		}
 
@@ -351,7 +351,7 @@ Load_Value :: Instruction {
 	handle = proc(opcode: u16) -> bool {
 		x := (opcode & 0xF00) >> 8
 
-		for count: u16 = 0; count < x; count += 1 {
+		for count: u16 = 0; count <= x; count += 1 {
 			registers[count] = memory[I + count]
 		}
 
