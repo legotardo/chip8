@@ -9,7 +9,6 @@ CHIP8_WIDTH :: 64
 CHIP8_HEIGHT :: 32
 DISPLAY_SCALE :: display.SCREEN_WIDTH / CHIP8_WIDTH
 START_ADDR :: 0x200
-I_ADDR :: 0x000
 FONT_ADDR :: 0x050
 FREQUENCY_MS :: 1000.0 / 700
 TIMERS_FREQUENCY_MS :: 1000.0 / 60
@@ -17,7 +16,7 @@ TIMERS_FREQUENCY_MS :: 1000.0 / 60
 memory: [4096]byte
 stack: [16]u16
 display_memory: [2048]byte
-i := cast(^u16)&memory[I_ADDR]
+I: u16 = 0
 pc: u16 = START_ADDR
 sp: u8 = 0
 registers: [16]byte
