@@ -12,6 +12,7 @@ START_ADDR :: 0x200
 I_ADDR :: 0x000
 FONT_ADDR :: 0x050
 FREQUENCY_MS :: 1000.0 / 700
+TIMERS_FREQUENCY_MS :: 1000.0 / 60
 
 memory: [4096]byte
 display_memory: [2048]byte
@@ -20,6 +21,9 @@ pc: u16 = START_ADDR
 registers: [16]byte
 last_tick: time.Tick
 cpu_accumulator: f64
+timers_accumulator: f64
+delay_timer: byte
+sound_timer: byte
 
 load_rom_from_file :: proc(path: string) {
 	data, err := os.read_entire_file(path, context.allocator)
@@ -34,8 +38,8 @@ load_rom_from_memory :: proc(data: []byte) {
 	memory = {}
 	display_memory = {}
 	registers = {}
-
 	last_tick = time.tick_now()
+
 	copy(memory[START_ADDR:], data)
 }
 
@@ -46,7 +50,7 @@ cycle :: proc() {
 
 	instruction_found := false
 	for instruction in instructions {
-		if opcode & 0xF000 != instruction.addr do continue
+		if opcode & instruction.mask != instruction.addr do continue
 
 		instruction_found = true
 		skip_next := instruction.handle(opcode)
@@ -66,10 +70,18 @@ run_cycles :: proc() {
 	elapsed := time.tick_since(last_tick)
 	last_tick = now
 	cpu_accumulator += time.duration_milliseconds(elapsed)
+	timers_accumulator += time.duration_milliseconds(elapsed)
 
 	for cpu_accumulator >= FREQUENCY_MS {
 		cpu_accumulator -= FREQUENCY_MS
 		cycle()
+	}
+
+	for timers_accumulator >= TIMERS_FREQUENCY_MS {
+		timers_accumulator -= TIMERS_FREQUENCY_MS
+
+		if delay_timer > 0 do delay_timer -= 1
+		if sound_timer > 0 do sound_timer -= 1
 	}
 
 	for idx := 0; idx < CHIP8_WIDTH * CHIP8_HEIGHT; idx += 1 {

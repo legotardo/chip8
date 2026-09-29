@@ -6,26 +6,15 @@ import "core:fmt"
 
 Instruction :: struct {
 	addr:   u16,
+	mask: u16,
 	handle: proc(opcode: u16) -> bool,
 }
 
-Op :: Instruction {
+Clear_Display :: Instruction {
 	addr = 0x0000,
+	mask = 0xFF0F,
 	handle = proc(opcode: u16) -> bool {
-		if opcode & 0x0F00 != 0x0000 do return false
-
-		switch (opcode) {
-		case 0x0e0:
-			{
-				display.clear()
-				break
-			}
-		case 0x0ee:
-			{
-				fmt.printfln("Returns from a subroutine")
-				break
-			}
-		}
+		display.clear()
 
 		return false
 	},
@@ -33,6 +22,7 @@ Op :: Instruction {
 
 Jump :: Instruction {
 	addr = 0x1000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		pc = opcode & 0x0FFF
 
@@ -42,6 +32,7 @@ Jump :: Instruction {
 
 Set_VX :: Instruction {
 	addr = 0x6000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		idx := u8(opcode & 0x0F00 >> 8)
 		registers[idx] = u8(opcode & 0x00FF)
@@ -52,6 +43,7 @@ Set_VX :: Instruction {
 
 Set_I :: Instruction {
 	addr = 0xa000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		i^ = u16(opcode & 0x0FFF)
 
@@ -61,6 +53,7 @@ Set_I :: Instruction {
 
 Display :: Instruction {
 	addr = 0xd000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
@@ -92,6 +85,7 @@ Display :: Instruction {
 
 Cond_Equals :: Instruction {
 	addr = 0x3000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
 		n := u8(opcode & 0x00FF)
@@ -106,6 +100,7 @@ Cond_Equals :: Instruction {
 
 Cond_Not_Equals :: Instruction {
 	addr = 0x4000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
 		n := u8(opcode & 0x00FF)
@@ -120,6 +115,7 @@ Cond_Not_Equals :: Instruction {
 
 Cond_Equals_2 :: Instruction {
 	addr = 0x5000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
@@ -133,8 +129,25 @@ Cond_Equals_2 :: Instruction {
 	},
 }
 
+Cond_Equals_3 :: Instruction {
+	addr = 0x9000,
+	mask = 0xF000,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		vx := registers[x]
+		vy := registers[y]
+
+		if vx != vy do return true
+
+		return false
+	},
+}
+
 Add_VX :: Instruction {
 	addr = 0x7000,
+	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		x := u8((opcode & 0x0F00) >> 8)
 		n := u8(opcode & 0x00FF)
@@ -145,8 +158,160 @@ Add_VX :: Instruction {
 	},
 }
 
+VX_EQ_VY :: Instruction {
+	addr = 0x8000,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] = registers[y]
+
+		return false
+	}
+}
+
+VX_OR_VY :: Instruction {
+	addr = 0x8001,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] |= registers[y]
+
+		return false
+	}
+}
+
+VX_AND_VY :: Instruction {
+	addr = 0x8002,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] &= registers[y]
+
+		return false
+	}
+}
+
+VX_XOR_VY :: Instruction {
+	addr = 0x8003,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] ~= registers[y]
+
+		return false
+	}
+}
+
+VX_PLUS_VY :: Instruction {
+	addr = 0x8004,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] += registers[y]
+
+		return false
+	}
+}
+
+VX_MINUS_VY :: Instruction {
+	addr = 0x8005,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] -= registers[y]
+
+		return false
+	}
+}
+
+VX_SHIFT_R :: Instruction {
+	addr = 0x8006,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+
+		registers[x] >>= 1
+
+		return false
+	}
+}
+
+
+VX_VY_MINUS_VX :: Instruction {
+	addr = 0x8007,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		y := u8((opcode & 0x00F0) >> 4)
+
+		registers[x] = registers[y] - registers[x]
+
+		return false
+	}
+}
+
+VX_SHIFT_L :: Instruction {
+	addr = 0x800E,
+	mask = 0xF00F,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+
+		registers[x] <<= 1
+
+		return false
+	}
+}
+
+Set_VX_From_Delay_Timer :: Instruction {
+	addr = 0xF007,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+
+		registers[x] = delay_timer
+
+		return false
+	}
+}
+
+Set_Delay_Timer :: Instruction {
+	addr = 0xF015,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+
+		delay_timer = registers[x]
+
+		return false
+	}
+}
+
+Set_Sound_Timer :: Instruction {
+	addr = 0xF018,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+
+		sound_timer = registers[x]
+
+		return false
+	}
+}
+
 instructions := [?]Instruction {
-	Op,
+	Clear_Display,
 	Jump,
 	Set_VX,
 	Set_I,
@@ -154,5 +319,18 @@ instructions := [?]Instruction {
 	Cond_Equals,
 	Cond_Not_Equals,
 	Cond_Equals_2,
+	Cond_Equals_3,
 	Add_VX,
+	VX_EQ_VY,
+	VX_OR_VY,
+	VX_AND_VY,
+	VX_XOR_VY,
+	VX_PLUS_VY,
+	VX_MINUS_VY,
+	VX_SHIFT_R,
+	VX_VY_MINUS_VX,
+	VX_SHIFT_L,
+	Set_VX_From_Delay_Timer,
+	Set_Delay_Timer,
+	Set_Sound_Timer,
 }
