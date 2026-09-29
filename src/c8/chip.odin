@@ -21,13 +21,21 @@ registers: [16]byte
 last_tick: time.Tick
 cpu_accumulator: f64
 
-load_rom :: proc(path: string) {
-	last_tick = time.tick_now()
-
+load_rom_from_file :: proc(path: string) {
 	data, err := os.read_entire_file(path, context.allocator)
 	assert(err == nil, "Failed to read rom file")
 	defer delete(data, context.allocator)
 
+	load_rom_from_memory(data)
+}
+
+load_rom_from_memory :: proc(data: []byte) {
+	pc = START_ADDR
+	memory = {}
+	display_memory = {}
+	registers = {}
+
+	last_tick = time.tick_now()
 	copy(memory[START_ADDR:], data)
 }
 

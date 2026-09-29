@@ -1,5 +1,6 @@
 package display
 
+import "core:fmt"
 import "vendor:sdl3"
 
 SCREEN_WIDTH :: 640
@@ -12,6 +13,8 @@ running := true
 last_event: sdl3.Event
 window: ^sdl3.Window
 renderer: ^sdl3.Renderer
+
+on_drop_event: proc(file_path: string)
 
 start_display :: proc() {
 	success := sdl3.Init({.VIDEO})
@@ -31,6 +34,12 @@ begin :: proc() {
 	for sdl3.PollEvent(&last_event) {
 		if last_event.type == .QUIT {
 			running = false
+		}
+
+		if last_event.type == .DROP_FILE {
+			if on_drop_event != nil {
+				on_drop_event(string(last_event.drop.data))
+			}
 		}
 	}
 
