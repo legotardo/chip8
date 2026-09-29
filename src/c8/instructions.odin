@@ -238,7 +238,10 @@ VX_PLUS_VY :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
-		registers[x] += registers[y]
+		sum := u16(registers[x]) + u16(registers[y])
+		carry := u8(sum > 0xFF)
+		registers[x] = u8(sum)
+		registers[15] = carry
 
 		return false
 	},
@@ -251,7 +254,13 @@ VX_MINUS_VY :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
+		not_borrow := u8(registers[x] >= registers[y])
 		registers[x] -= registers[y]
+		// Fiquei muito tempo tentando entender o motivo pelo qual
+		// essa flag estava errada, e era por causa que poderia existir
+		// um overflow que acabava chegando no registrador VF
+		// por conta disso, ele precisa sempre ser salvo por último.
+		registers[15] = not_borrow
 
 		return false
 	},
@@ -281,7 +290,9 @@ VX_VY_MINUS_VX :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
+		not_borrow := u8(registers[y] >= registers[x])
 		registers[x] = registers[y] - registers[x]
+		registers[15] = not_borrow
 
 		return false
 	},
@@ -294,8 +305,11 @@ VX_SHIFT_L :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
+		// TODO: Ser configuravel para usar o VX?
 		registers[x] = registers[y]
-		shifted := registers[x] & 1
+		// Bit mais significativo, diferente
+		// do shift_r
+		shifted := (registers[x] >> 7) & 1
 		registers[x] <<= 1
 		registers[15] = shifted
 
