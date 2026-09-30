@@ -48,10 +48,10 @@ jobs:
 
       - name: Bundle and Compress (Windows)
         if: runner.os == 'Windows'
-        shell: bash
+        shell: pwsh
         run: |
-          cp "${{ steps.sdl.outputs.prefix }}/bin/SDL3.dll" .
-          zip -r ${{ matrix.archive }} ${{ matrix.output }} SDL3.dll
+          Copy-Item "${{ steps.sdl.outputs.prefix }}/bin/SDL3.dll" -Destination .
+          Compress-Archive -Path ${{ matrix.output }}, SDL3.dll -DestinationPath ${{ matrix.archive }}
 
       - name: Bundle and Compress (macOS)
         if: runner.os == 'macOS'
