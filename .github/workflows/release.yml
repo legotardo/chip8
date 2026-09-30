@@ -23,7 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SDL
+      - name: Install SDL3 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install sdl3
+
+      - name: Setup SDL (Windows)
+        if: runner.os == 'Windows'
         id: sdl
         uses: libsdl-org/setup-sdl@main
         with:
@@ -37,10 +42,17 @@ jobs:
       - name: Build
         run: odin build src/ -out:${{ matrix.output }} -o:speed
 
-      - name: Copy SDL3.dll (Windows)
+      - name: Bundle SDL3 (Windows)
         if: runner.os == 'Windows'
         shell: bash
         run: cp "${{ steps.sdl.outputs.prefix }}/bin/SDL3.dll" .
+
+      - name: Bundle SDL3 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cp $(brew --prefix sdl3)/lib/libSDL3.dylib .
+          install_name_tool -add_rpath @executable_path ${{ matrix.output }} || true
+          install_name_tool -change "$(brew --prefix sdl3)/lib/libSDL3.dylib" "@executable_path/libSDL3.dylib" ${{ matrix.output }} || true
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -49,6 +61,7 @@ jobs:
           path: |
             ${{ matrix.output }}
             *.dll
+            *.dylib
 
   release:
     needs: build
