@@ -1,8 +1,11 @@
 // https://en.wikipedia.org/wiki/CHIP-8
 package c8
 
-import "../display"
-import "core:fmt"
+import "core:math/rand"
+import "../keyboard"
+
+COSMAC_JUMP_OFFSET :: false
+COSMAC_SHIFT :: false
 
 Instruction :: struct {
 	addr:   u16,
@@ -14,7 +17,7 @@ Clear_Display :: Instruction {
 	addr = 0x0000,
 	mask = 0xFF0F,
 	handle = proc(opcode: u16) -> bool {
-		display.clear()
+		display_memory = {}
 
 		return false
 	},
@@ -67,6 +70,23 @@ Set_I :: Instruction {
 	mask = 0xF000,
 	handle = proc(opcode: u16) -> bool {
 		I = opcode & 0x0FFF
+
+		return false
+	},
+}
+
+Jump_Offset :: Instruction {
+	addr = 0xB000,
+	mask = 0xF000,
+	handle = proc(opcode: u16) -> bool {
+		if COSMAC_JUMP_OFFSET {
+			offset := opcode & 0x0FFF
+			pc = offset + u16(registers[0])
+		} else {
+			x := u8((opcode & 0x0F00) >> 8)
+			offset := opcode & 0x00FF
+			pc = offset + u16(registers[x])
+		}
 
 		return false
 	},
@@ -273,7 +293,9 @@ VX_SHIFT_R :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
-		registers[x] = registers[y]
+		if COSMAC_SHIFT {
+			registers[x] = registers[y]
+		}
 		shifted := registers[x] & 1
 		registers[x] >>= 1
 		registers[15] = shifted
@@ -305,8 +327,9 @@ VX_SHIFT_L :: Instruction {
 		x := u8((opcode & 0x0F00) >> 8)
 		y := u8((opcode & 0x00F0) >> 4)
 
-		// TODO: Ser configuravel para usar o VX?
-		registers[x] = registers[y]
+		if COSMAC_SHIFT {
+			registers[x] = registers[y]
+		}
 		// Bit mais significativo, diferente
 		// do shift_r
 		shifted := (registers[x] >> 7) & 1
@@ -413,6 +436,69 @@ Add_To_Index :: Instruction {
 	},
 }
 
+Skip_Key_N_Pressed :: Instruction {
+	addr = 0xE0A1,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0xF00) >> 8)
+		vx := registers[x]
+		is_pressed := keyboard.is_key_down(vx)
+
+		return !is_pressed
+	},
+}
+
+Skip_Key_Pressed :: Instruction {
+	addr = 0xE09E,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0xF00) >> 8)
+		vx := registers[x]
+		is_pressed := keyboard.is_key_down(vx)
+
+		return is_pressed
+	},
+}
+
+Get_Key :: Instruction {
+	addr = 0xF00A,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0xF00) >> 8)
+		vx := registers[x]
+
+		if !keyboard.was_some_key_pressed() do pc -= 2
+
+		return false
+	},
+}
+
+Random :: Instruction {
+	addr = 0xC000,
+	mask = 0xF000,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		n := u8(opcode & 0x00FF)
+
+		registers[x] = u8(rand.int_range(0, int(n))) & n
+
+		return false
+	},
+}
+
+Font_Char :: Instruction {
+	addr = 0xF029,
+	mask = 0xF0FF,
+	handle = proc(opcode: u16) -> bool {
+		x := u8((opcode & 0x0F00) >> 8)
+		vx := registers[x]
+
+		I = FONT_ADDR + u16(vx * 5)
+
+		return false
+	},
+}
+
 instructions := [?]Instruction {
 	Clear_Display,
 	Jump,
@@ -442,4 +528,10 @@ instructions := [?]Instruction {
 	Load_Value,
 	Binary_Decimal_Conversion,
 	Add_To_Index,
+	Skip_Key_N_Pressed,
+	Skip_Key_Pressed,
+	Jump_Offset,
+	Get_Key,
+	Random,
+	Font_Char,
 }

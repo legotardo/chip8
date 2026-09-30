@@ -42,6 +42,7 @@ load_rom_from_memory :: proc(data: []byte) {
 	last_tick = time.tick_now()
 
 	copy(memory[START_ADDR:], data)
+	copy(memory[FONT_ADDR:], FONT)
 }
 
 @(private = "file")
@@ -93,17 +94,25 @@ run_cycles :: proc() {
 			display.draw_pixel(x, y, DISPLAY_SCALE)
 		}
 	}
+
+	if sound_timer > 0 {
+		display.generate_beep()
+	}
 }
 
 destroy :: proc() {
 }
 
 push_stack :: proc(data: u16) {
+	assert(sp < size_of(u16) * 16)
+
 	stack[sp] = data
 	sp += 1
 }
 
 pop_stack :: proc() -> u16 {
+	assert(sp > 0)
+
 	val := stack[sp - 1]
 	sp -= 1
 
