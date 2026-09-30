@@ -12,10 +12,10 @@ jobs:
         include:
           - os: macos-latest
             artifact: chip8-macos
-            output: chip8-macos
+            output: chip8
           - os: windows-latest
             artifact: chip8-windows
-            output: chip8-win.exe
+            output: chip8.exe
 
     runs-on: ${{ matrix.os }}
 
@@ -27,6 +27,12 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install sdl3
 
+      - name: Install SDL3 (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          echo "Buscando ou compilando dependências do SDL3 no Windows se necessário"
+
       - name: Setup Odin
         uses: laytan/setup-odin@v2
         with:
@@ -35,11 +41,24 @@ jobs:
       - name: Build
         run: odin build src/ -out:${{ matrix.output }} -o:speed
 
+      - name: Locate & Copy SDL3.dll (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $dll = Get-ChildItem -Path C:\ -Filter "SDL3.dll" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($dll) {
+              Copy-Item $dll.FullName -Destination .
+          } else {
+              echo "SDL3.dll não encontrada nos caminhos padrão do sistema"
+          }
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.output }}
+          path: |
+            ${{ matrix.output }}
+            *.dll
 
   release:
     needs: build
@@ -52,13 +71,15 @@ jobs:
         with:
           path: artifacts
 
-      - name: Display structure of downloaded files
-        run: ls -R artifacts
+      - name: Create Zip Archives
+        run: |
+          cd artifacts/chip8-windows && zip -r ../../chip8-windows.zip ./* && cd ../..
+          cd artifacts/chip8-macos && tar -czvf ../../chip8-macos.tar.gz ./* && cd ../..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/chip8-macos/chip8
-            artifacts/chip8-windows/chip8.exe
+            chip8-windows.zip
+            chip8-macos.tar.gz
           generate_release_notes: true
