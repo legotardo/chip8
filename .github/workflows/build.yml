@@ -22,10 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Odin
-        uses: laytan/odin@v2
+      - name: Setup Odin
+        uses: laytan/setup-odin@v2
         with:
-          version: master
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: odin build src/ -out:${{ matrix.output }}
