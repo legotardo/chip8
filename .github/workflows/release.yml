@@ -13,9 +13,13 @@ jobs:
           - os: macos-latest
             artifact: chip8-macos
             output: chip8
+            flags: ""
+            archive: chip8-macos.tar.gz
           - os: windows-latest
             artifact: chip8-windows
             output: chip8.exe
+            flags: "-subsystem:windows"
+            archive: chip8-windows.zip
 
     runs-on: ${{ matrix.os }}
 
@@ -40,28 +44,28 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
-        run: odin build src/ -out:${{ matrix.output }} -o:speed
+        run: odin build src/ -out:${{ matrix.output }} -o:speed ${{ matrix.flags }}
 
-      - name: Bundle SDL3 (Windows)
+      - name: Bundle and Compress (Windows)
         if: runner.os == 'Windows'
         shell: bash
-        run: cp "${{ steps.sdl.outputs.prefix }}/bin/SDL3.dll" .
+        run: |
+          cp "${{ steps.sdl.outputs.prefix }}/bin/SDL3.dll" .
+          zip -r ${{ matrix.archive }} ${{ matrix.output }} SDL3.dll
 
-      - name: Bundle SDL3 (macOS)
+      - name: Bundle and Compress (macOS)
         if: runner.os == 'macOS'
         run: |
           cp $(brew --prefix sdl3)/lib/libSDL3.dylib .
           install_name_tool -add_rpath @executable_path ${{ matrix.output }} || true
           install_name_tool -change "$(brew --prefix sdl3)/lib/libSDL3.dylib" "@executable_path/libSDL3.dylib" ${{ matrix.output }} || true
+          tar -czvf ${{ matrix.archive }} ${{ matrix.output }} libSDL3.dylib
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.output }}
-            *.dll
-            *.dylib
+          path: ${{ matrix.archive }}
 
   release:
     needs: build
@@ -73,16 +77,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
-      - name: Create Zip Archives
-        run: |
-          cd artifacts/chip8-windows && zip -r ../../chip8-windows.zip ./* && cd ../..
-          cd artifacts/chip8-macos && tar -czvf ../../chip8-macos.tar.gz ./* && cd ../..
+          merge-multiple: true 
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            chip8-windows.zip
-            chip8-macos.tar.gz
+            artifacts/chip8-windows.zip
+            artifacts/chip8-macos.tar.gz
           generate_release_notes: true
