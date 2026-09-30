@@ -12,10 +12,10 @@ jobs:
         include:
           - os: macos-latest
             artifact: chip8-macos
-            output: chip8
+            output: chip8-macos
           - os: windows-latest
             artifact: chip8-windows
-            output: chip8.exe
+            output: chip8-win.exe
 
     runs-on: ${{ matrix.os }}
 
